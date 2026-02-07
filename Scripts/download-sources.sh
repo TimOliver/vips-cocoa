@@ -24,6 +24,11 @@ DOWNLOADS=(
     "dav1d|https://code.videolan.org/videolan/dav1d/-/archive/${DAV1D_VERSION}/dav1d-${DAV1D_VERSION}.tar.gz"
     "libjxl|https://github.com/libjxl/libjxl/archive/refs/tags/v${LIBJXL_VERSION}.tar.gz"
     "libheif|https://github.com/strukturag/libheif/releases/download/v${LIBHEIF_VERSION}/libheif-${LIBHEIF_VERSION}.tar.gz"
+    "fftw|http://fftw.org/fftw-${FFTW_VERSION}.tar.gz"
+    "lcms2|https://github.com/mm2/Little-CMS/releases/download/lcms2.18/lcms2-${LCMS2_VERSION}.tar.gz"
+    "libtiff|https://download.osgeo.org/libtiff/tiff-${LIBTIFF_VERSION}.tar.gz"
+    "cgif|https://github.com/dloebl/cgif/archive/refs/tags/v${CGIF_VERSION}.tar.gz"
+    "libexif|https://github.com/libexif/libexif/releases/download/v${LIBEXIF_VERSION}/libexif-${LIBEXIF_VERSION}.tar.bz2"
     "libvips|https://github.com/libvips/libvips/releases/download/v${LIBVIPS_VERSION}/vips-${LIBVIPS_VERSION}.tar.xz"
 )
 
@@ -35,6 +40,8 @@ get_filename() {
         brotli)   echo "brotli-${BROTLI_VERSION}.tar.gz" ;;
         highway)  echo "highway-${HIGHWAY_VERSION}.tar.gz" ;;
         libjxl)   echo "libjxl-${LIBJXL_VERSION}.tar.gz" ;;
+        cgif)     echo "cgif-${CGIF_VERSION}.tar.gz" ;;
+        libtiff)  echo "tiff-${LIBTIFF_VERSION}.tar.gz" ;;
         libvips)  echo "vips-${LIBVIPS_VERSION}.tar.xz" ;;
         *)        basename "$url" ;;
     esac

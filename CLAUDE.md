@@ -23,9 +23,13 @@ This project automates building libvips and all its dependencies for Apple platf
 - PNG (libpng)
 - WebP (libwebp)
 - JPEG-XL (libjxl)
+- TIFF (libtiff)
 - AVIF (decode-only via dav1d + libheif)
 - HEIF (libheif)
-- GIF (built-in)
+- GIF (built-in decode, cgif encode)
+- EXIF metadata (libexif)
+- ICC color management (lcms2)
+- FFT support (fftw3, single-precision)
 
 ## Dependencies (Build Order)
 
@@ -37,18 +41,23 @@ This project automates building libvips and all its dependencies for Apple platf
 5. **libpng** (1.6.54) - PNG codec
 6. **brotli** (1.2.0) - Compression library
 7. **highway** (1.3.0) - SIMD library
+8. **fftw** (3.3.10) - FFT library (single-precision)
+9. **lcms2** (2.18) - ICC color management
+10. **cgif** (0.5.1) - GIF encoder
+11. **libexif** (0.6.25) - EXIF metadata
 
 ### Tier 2 - Depends on Tier 1
-8. **glib** (2.87.1) - Core utility library (needs libffi, pcre2)
-9. **libwebp** (1.6.0) - WebP codec
-10. **dav1d** (1.5.1) - AV1 decoder
+12. **glib** (2.87.1) - Core utility library (needs libffi, pcre2)
+13. **libwebp** (1.6.0) - WebP codec
+14. **dav1d** (1.5.1) - AV1 decoder
+15. **libtiff** (4.7.1) - TIFF codec (needs libjpeg-turbo)
 
 ### Tier 3 - Depends on Tier 2
-11. **libjxl** (0.11.1) - JPEG-XL codec (needs brotli, highway)
-12. **libheif** (1.21.2) - HEIF/AVIF container (needs dav1d)
+16. **libjxl** (0.11.1) - JPEG-XL codec (needs brotli, highway)
+17. **libheif** (1.21.2) - HEIF/AVIF container (needs dav1d)
 
 ### Final
-13. **libvips** (8.18.0) - Image processing library
+18. **libvips** (8.18.0) - Image processing library
 
 ## Project Structure
 
@@ -72,9 +81,14 @@ vips-cocoa/
     ├── build-libpng.sh
     ├── build-brotli.sh
     ├── build-highway.sh
+    ├── build-fftw.sh
+    ├── build-lcms2.sh
+    ├── build-cgif.sh
+    ├── build-libexif.sh
     ├── build-glib.sh
     ├── build-libwebp.sh
     ├── build-dav1d.sh
+    ├── build-libtiff.sh
     ├── build-libjxl.sh
     ├── build-libheif.sh
     ├── build-libvips.sh
@@ -190,7 +204,7 @@ These are needed by downstream consumers that build libvips from source (e.g., V
 
 ### Build Approach
 
-1. All 13 dependencies are compiled as static libraries for each target architecture
+1. All 18 dependencies are compiled as static libraries for each target architecture
 2. **Dynamic framework:** All static libraries are linked into a single dylib per arch, then packaged as an xcframework
 3. **Static framework:** All static libraries are merged via `libtool -static` per arch, then packaged as an xcframework
 4. Headers for both libvips and glib are included so consumers can use the libvips C API directly

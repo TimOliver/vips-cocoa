@@ -42,6 +42,11 @@ build_libvips() {
     local libjxl_dir="${STAGING_DIR}/libjxl/${target}"
     local dav1d_dir="${STAGING_DIR}/dav1d/${target}"
     local libheif_dir="${STAGING_DIR}/libheif/${target}"
+    local fftw_dir="${STAGING_DIR}/fftw/${target}"
+    local lcms2_dir="${STAGING_DIR}/lcms2/${target}"
+    local libtiff_dir="${STAGING_DIR}/libtiff/${target}"
+    local cgif_dir="${STAGING_DIR}/cgif/${target}"
+    local libexif_dir="${STAGING_DIR}/libexif/${target}"
 
     # Clean existing build
     rm -rf "$build_dir"
@@ -81,6 +86,11 @@ EOF
         "${libjxl_dir}/lib/pkgconfig"
         "${dav1d_dir}/lib/pkgconfig"
         "${libheif_dir}/lib/pkgconfig"
+        "${fftw_dir}/lib/pkgconfig"
+        "${lcms2_dir}/lib/pkgconfig"
+        "${libtiff_dir}/lib/pkgconfig"
+        "${cgif_dir}/lib/pkgconfig"
+        "${libexif_dir}/lib/pkgconfig"
     )
 
     # Join paths with colon
@@ -129,6 +139,11 @@ EOF
         "${libjxl_dir}/lib/libjxl_threads.a"
         "${libjxl_dir}/lib/libjxl_cms.a"
         "${libheif_dir}/lib/libheif.a"
+        "${fftw_dir}/lib/libfftw3f.a"
+        "${lcms2_dir}/lib/liblcms2.a"
+        "${libtiff_dir}/lib/libtiff.a"
+        "${cgif_dir}/lib/libcgif.a"
+        "${libexif_dir}/lib/libexif.a"
     )
 
     # Build link arguments for static libraries
@@ -162,15 +177,15 @@ EOF
         -Dexamples=false \
         -Dcplusplus=true \
         -Dcfitsio=disabled \
-        -Dcgif=disabled \
-        -Dexif=disabled \
-        -Dfftw=disabled \
+        -Dcgif=enabled \
+        -Dexif=enabled \
+        -Dfftw=enabled \
         -Dfontconfig=disabled \
         -Dheif=enabled \
         -Dimagequant=disabled \
         -Djpeg=enabled \
         -Djpeg-xl=enabled \
-        -Dlcms=disabled \
+        -Dlcms=enabled \
         -Dmagick=disabled \
         -Dmatio=disabled \
         -Dnifti=disabled \
@@ -185,7 +200,7 @@ EOF
         -Dquantizr=disabled \
         -Drsvg=disabled \
         -Dspng=disabled \
-        -Dtiff=disabled \
+        -Dtiff=enabled \
         -Dwebp=enabled \
         -Dzlib=enabled \
         -Dhighway=enabled

@@ -114,6 +114,11 @@ get_static_libs() {
     echo "${STAGING_DIR}/libjxl/${target}/lib/libjxl_threads.a"
     echo "${STAGING_DIR}/libjxl/${target}/lib/libjxl_cms.a"
     echo "${STAGING_DIR}/libheif/${target}/lib/libheif.a"
+    echo "${STAGING_DIR}/fftw/${target}/lib/libfftw3f.a"
+    echo "${STAGING_DIR}/lcms2/${target}/lib/liblcms2.a"
+    echo "${STAGING_DIR}/libtiff/${target}/lib/libtiff.a"
+    echo "${STAGING_DIR}/cgif/${target}/lib/libcgif.a"
+    echo "${STAGING_DIR}/libexif/${target}/lib/libexif.a"
     echo "${STAGING_DIR}/libvips/${target}/lib/libvips.a"
 }
 
@@ -285,6 +290,11 @@ build_dylib_for_target() {
     static_libs+=" ${STAGING_DIR}/libjxl/${target}/lib/libjxl_threads.a"
     static_libs+=" ${STAGING_DIR}/libjxl/${target}/lib/libjxl_cms.a"
     static_libs+=" ${STAGING_DIR}/libheif/${target}/lib/libheif.a"
+    static_libs+=" ${STAGING_DIR}/fftw/${target}/lib/libfftw3f.a"
+    static_libs+=" ${STAGING_DIR}/lcms2/${target}/lib/liblcms2.a"
+    static_libs+=" ${STAGING_DIR}/libtiff/${target}/lib/libtiff.a"
+    static_libs+=" ${STAGING_DIR}/cgif/${target}/lib/libcgif.a"
+    static_libs+=" ${STAGING_DIR}/libexif/${target}/lib/libexif.a"
     # Use -force_load for libvips to ensure all public symbols are exported
     static_libs+=" -force_load ${STAGING_DIR}/libvips/${target}/lib/libvips.a"
 

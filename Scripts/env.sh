@@ -39,6 +39,11 @@ export GLIB_VERSION="2.87.1"
 export DAV1D_VERSION="1.5.1"
 export LIBJXL_VERSION="0.11.1"
 export LIBHEIF_VERSION="1.21.2"
+export FFTW_VERSION="3.3.10"
+export LCMS2_VERSION="2.18"
+export LIBTIFF_VERSION="4.7.1"
+export CGIF_VERSION="0.5.1"
+export LIBEXIF_VERSION="0.6.25"
 export LIBVIPS_VERSION="8.18.0"
 
 # =============================================================================
@@ -60,6 +65,11 @@ export GLIB_URL="https://download.gnome.org/sources/glib/${GLIB_MAJOR_MINOR}/gli
 export DAV1D_URL="https://code.videolan.org/videolan/dav1d/-/archive/${DAV1D_VERSION}/dav1d-${DAV1D_VERSION}.tar.gz"
 export LIBJXL_URL="https://github.com/libjxl/libjxl/archive/refs/tags/v${LIBJXL_VERSION}.tar.gz"
 export LIBHEIF_URL="https://github.com/strukturag/libheif/releases/download/v${LIBHEIF_VERSION}/libheif-${LIBHEIF_VERSION}.tar.gz"
+export FFTW_URL="http://fftw.org/fftw-${FFTW_VERSION}.tar.gz"
+export LCMS2_URL="https://github.com/mm2/Little-CMS/releases/download/lcms2.18/lcms2-${LCMS2_VERSION}.tar.gz"
+export LIBTIFF_URL="https://download.osgeo.org/libtiff/tiff-${LIBTIFF_VERSION}.tar.gz"
+export CGIF_URL="https://github.com/dloebl/cgif/archive/refs/tags/v${CGIF_VERSION}.tar.gz"
+export LIBEXIF_URL="https://github.com/libexif/libexif/releases/download/v${LIBEXIF_VERSION}/libexif-${LIBEXIF_VERSION}.tar.bz2"
 export LIBVIPS_URL="https://github.com/libvips/libvips/releases/download/v${LIBVIPS_VERSION}/vips-${LIBVIPS_VERSION}.tar.xz"
 
 # =============================================================================
