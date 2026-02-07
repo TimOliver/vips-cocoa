@@ -13,8 +13,6 @@ This project automates building libvips and all its dependencies for Apple platf
 | iOS Device | arm64 | iphoneos | 15.0 |
 | iOS Simulator | arm64, x86_64 | iphonesimulator | 15.0 |
 | Mac Catalyst | arm64, x86_64 | macosx (-macabi) | 15.0 |
-| tvOS Device | arm64 | appletvos | 15.0 |
-| tvOS Simulator | arm64, x86_64 | appletvsimulator | 15.0 |
 | macOS | arm64, x86_64 | macosx | 12.0 |
 | visionOS Device | arm64 | xros | 1.0 |
 | visionOS Simulator | arm64 | xrsimulator | 1.0 |
@@ -80,8 +78,8 @@ vips-cocoa/
     ├── build-libjxl.sh
     ├── build-libheif.sh
     ├── build-libvips.sh
-    ├── cross-files/            # Meson cross-compilation files (12 files)
-    │   ├── ios.ini             # iOS, tvOS, macOS, visionOS targets
+    ├── cross-files/            # Meson cross-compilation files
+    │   ├── ios.ini             # iOS, macOS, visionOS targets
     │   ├── ios-sim-arm64.ini   # Plus simulator and catalyst variants
     │   └── ...
     └── toolchains/             # CMake toolchain files
@@ -110,7 +108,7 @@ vips-cocoa/
 ./build.sh --skip-download      # Skip downloading sources (use existing)
 ./build.sh --jobs 8             # Set parallel job count
 ./build.sh --platform ios       # Build iOS only
-./build.sh --platform ios,tvos  # Build iOS + tvOS
+./build.sh --platform ios,macos # Build iOS + macOS
 ./build.sh -f                   # Rebuild xcframeworks only (fast)
 ./build.sh -f --dynamic-only    # Rebuild dynamic only
 ./build.sh -f --static-only     # Rebuild static only
@@ -130,9 +128,6 @@ The build produces per-platform xcframeworks under `build/xcframeworks/`:
 ```
 build/xcframeworks/
 ├── ios/
-│   ├── dynamic/vips.xcframework/
-│   └── static/vips.xcframework/
-├── tvos/
 │   ├── dynamic/vips.xcframework/
 │   └── static/vips.xcframework/
 ├── macos/
@@ -172,8 +167,6 @@ After packaging (`Scripts/package-prebuilt.sh`):
 ```
 vips-dynamic-ios.zip      # contains vips.xcframework for iOS
 vips-static-ios.zip
-vips-dynamic-tvos.zip
-vips-static-tvos.zip
 vips-dynamic-macos.zip
 vips-static-macos.zip
 vips-dynamic-visionos.zip
@@ -219,7 +212,6 @@ The dynamic framework uses `-force_load` for two libraries:
 | Family | `--platform` value | Targets |
 |--------|-------------------|---------|
 | iOS | `ios` | ios, ios-sim-arm64, ios-sim-x86_64, catalyst-arm64, catalyst-x86_64 |
-| tvOS | `tvos` | tvos, tvos-sim-arm64, tvos-sim-x86_64 |
 | macOS | `macos` | macos-arm64, macos-x86_64 |
 | visionOS | `visionos` | visionos, visionos-sim-arm64 |
 
@@ -232,9 +224,6 @@ The dynamic framework uses `-force_load` for two libraries:
 | `ios-sim-x86_64` | iOS Simulator x86_64 |
 | `catalyst-arm64` | Mac Catalyst arm64 |
 | `catalyst-x86_64` | Mac Catalyst x86_64 |
-| `tvos` | tvOS Device arm64 |
-| `tvos-sim-arm64` | tvOS Simulator arm64 |
-| `tvos-sim-x86_64` | tvOS Simulator x86_64 |
 | `macos-arm64` | macOS arm64 |
 | `macos-x86_64` | macOS x86_64 |
 | `visionos` | visionOS Device arm64 |

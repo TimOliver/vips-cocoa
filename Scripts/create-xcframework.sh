@@ -38,7 +38,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$TARGET_PLATFORM" ]; then
-    log_error "--platform is required (ios, tvos, macos, visionos)"
+    log_error "--platform is required (ios, macos, visionos)"
     exit 1
 fi
 
@@ -56,10 +56,6 @@ get_platform_slices() {
             echo "ios-arm64:ios:arm64"
             echo "ios-arm64_x86_64-simulator:ios-sim-arm64,ios-sim-x86_64:arm64,x86_64"
             echo "ios-arm64_x86_64-maccatalyst:catalyst-arm64,catalyst-x86_64:arm64,x86_64"
-            ;;
-        tvos)
-            echo "tvos-arm64:tvos:arm64"
-            echo "tvos-arm64_x86_64-simulator:tvos-sim-arm64,tvos-sim-x86_64:arm64,x86_64"
             ;;
         macos)
             echo "macos-arm64_x86_64:macos-arm64,macos-x86_64:arm64,x86_64"

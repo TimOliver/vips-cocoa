@@ -26,7 +26,7 @@ Options:
     -j, --jobs N            Number of parallel jobs (default: auto)
     -f, --framework         Rebuild xcframeworks only (fast iteration)
     --platform PLATFORMS    Comma-separated list of platforms to build
-                            (ios,tvos,macos,visionos; default: all)
+                            (ios,macos,visionos; default: all)
     --dynamic-only          Build only dynamic xcframework
     --static-only           Build only static xcframework
     --skip-to LIB           Skip to building specific library
@@ -39,7 +39,7 @@ Libraries (in build order):
 Examples:
     $(basename "$0")                        # Full build (all platforms)
     $(basename "$0") --platform ios         # Build iOS only
-    $(basename "$0") --platform ios,tvos    # Build iOS + tvOS
+    $(basename "$0") --platform ios,macos   # Build iOS + macOS
     $(basename "$0") -c                     # Clean build
     $(basename "$0") -f                     # Rebuild xcframeworks only (fast)
     $(basename "$0") -f --dynamic-only      # Rebuild dynamic xcframework only
@@ -69,7 +69,6 @@ Library Versions:
 
 Platforms:
     iOS (min ${IOS_MIN_VERSION}):        device arm64, simulator arm64/x86_64, Mac Catalyst arm64/x86_64
-    tvOS (min ${TVOS_MIN_VERSION}):       device arm64, simulator arm64/x86_64
     macOS (min ${MACOS_MIN_VERSION}):      arm64, x86_64
     visionOS (min ${VISIONOS_MIN_VERSION}):   device arm64, simulator arm64
 
@@ -179,12 +178,6 @@ check_prerequisites() {
             ios)
                 if ! xcrun --sdk iphoneos --show-sdk-path >/dev/null 2>&1; then
                     log_error "iOS SDK not found. Please install Xcode with iOS support."
-                    exit 1
-                fi
-                ;;
-            tvos)
-                if ! xcrun --sdk appletvos --show-sdk-path >/dev/null 2>&1; then
-                    log_error "tvOS SDK not found. Please install Xcode with tvOS support."
                     exit 1
                 fi
                 ;;
