@@ -469,12 +469,12 @@ build_static_xcframework() {
             arch_archives+=("$merged")
         done
 
-        # Create fat archive
+        # Create fat archive (must use .a extension for xcodebuild -create-xcframework)
         log_info "  Creating framework archive..."
         if [ ${#arch_archives[@]} -eq 1 ]; then
-            cp "${arch_archives[0]}" "${framework_dir}/vips"
+            cp "${arch_archives[0]}" "${framework_dir}/vips.a"
         else
-            lipo -create "${arch_archives[@]}" -output "${framework_dir}/vips"
+            lipo -create "${arch_archives[@]}" -output "${framework_dir}/vips.a"
         fi
 
         # Copy headers (use first target for headers)
@@ -490,8 +490,8 @@ build_static_xcframework() {
         create_static_module_map "$framework_dir"
 
         # Show info
-        local size=$(ls -lh "${framework_dir}/vips" | awk '{print $5}')
-        local archs_info=$(lipo -info "${framework_dir}/vips" 2>/dev/null | sed 's/.*: //' || echo "unknown")
+        local size=$(ls -lh "${framework_dir}/vips.a" | awk '{print $5}')
+        local archs_info=$(lipo -info "${framework_dir}/vips.a" 2>/dev/null | sed 's/.*: //' || echo "unknown")
         log_info "  Framework: ${archs_info} (${size})"
     done
 
@@ -502,7 +502,7 @@ build_static_xcframework() {
     for slice_config in "${SLICES[@]}"; do
         IFS=':' read -r slice_name _ _ <<< "$slice_config"
         local framework_dir="${temp}/${slice_name}/vips.framework"
-        xcframework_args+=(-library "${framework_dir}/vips" -headers "${framework_dir}/Headers")
+        xcframework_args+=(-library "${framework_dir}/vips.a" -headers "${framework_dir}/Headers")
     done
 
     mkdir -p "$(dirname "$xcf_dir")"
@@ -520,10 +520,10 @@ build_static_xcframework() {
             local slice=$(basename "$dir")
             # Static xcframework uses library layout, not framework layout
             local binary=""
-            if [ -f "${dir}/vips.framework/vips" ]; then
-                binary="${dir}/vips.framework/vips"
-            elif [ -f "${dir}/vips" ]; then
-                binary="${dir}/vips"
+            if [ -f "${dir}/vips.a" ]; then
+                binary="${dir}/vips.a"
+            elif [ -f "${dir}/vips.framework/vips.a" ]; then
+                binary="${dir}/vips.framework/vips.a"
             fi
             if [ -n "$binary" ] && [ -f "$binary" ]; then
                 local archs=$(lipo -info "$binary" 2>/dev/null | sed 's/.*: //' || echo "unknown")
