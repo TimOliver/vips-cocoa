@@ -1,5 +1,5 @@
 #!/bin/bash
-# build-fftw.sh - Build FFTW3 (single-precision) for all targets
+# build-fftw.sh - Build FFTW3 (double-precision) for all targets
 # Provides FFT support for libvips frequency-domain operations
 
 set -e
@@ -31,14 +31,13 @@ build_fftw() {
         --host="$HOST" \
         --enable-static \
         --disable-shared \
-        --enable-float \
         --disable-fortran \
         --disable-doc
 
     make -j "$JOBS"
     make install
 
-    verify_library "${install_dir}/lib/libfftw3f.a" "$arch"
+    verify_library "${install_dir}/lib/libfftw3.a" "$arch"
 }
 
 build_for_all_targets "$LIB_NAME" build_fftw

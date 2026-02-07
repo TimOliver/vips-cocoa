@@ -139,7 +139,7 @@ EOF
         "${libjxl_dir}/lib/libjxl_threads.a"
         "${libjxl_dir}/lib/libjxl_cms.a"
         "${libheif_dir}/lib/libheif.a"
-        "${fftw_dir}/lib/libfftw3f.a"
+        "${fftw_dir}/lib/libfftw3.a"
         "${lcms2_dir}/lib/liblcms2.a"
         "${libtiff_dir}/lib/libtiff.a"
         "${cgif_dir}/lib/libcgif.a"

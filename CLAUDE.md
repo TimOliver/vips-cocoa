@@ -29,7 +29,7 @@ This project automates building libvips and all its dependencies for Apple platf
 - GIF (built-in decode, cgif encode)
 - EXIF metadata (libexif)
 - ICC color management (lcms2)
-- FFT support (fftw3, single-precision)
+- FFT support (fftw3)
 
 ## Dependencies (Build Order)
 
@@ -41,7 +41,7 @@ This project automates building libvips and all its dependencies for Apple platf
 5. **libpng** (1.6.54) - PNG codec
 6. **brotli** (1.2.0) - Compression library
 7. **highway** (1.3.0) - SIMD library
-8. **fftw** (3.3.10) - FFT library (single-precision)
+8. **fftw** (3.3.10) - FFT library
 9. **lcms2** (2.18) - ICC color management
 10. **cgif** (0.5.1) - GIF encoder
 11. **libexif** (0.6.25) - EXIF metadata
