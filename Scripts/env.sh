@@ -27,7 +27,7 @@ export VISIONOS_MIN_VERSION="1.0"
 # =============================================================================
 # Library Versions
 # =============================================================================
-export EXPAT_VERSION="2.7.3"
+export EXPAT_VERSION="2.7.4"
 export LIBFFI_VERSION="3.5.2"
 export PCRE2_VERSION="10.47"
 export LIBJPEG_TURBO_VERSION="3.1.3"
@@ -35,14 +35,13 @@ export LIBPNG_VERSION="1.6.54"
 export LIBWEBP_VERSION="1.6.0"
 export BROTLI_VERSION="1.2.0"
 export HIGHWAY_VERSION="1.3.0"
-export GLIB_VERSION="2.87.1"
-export DAV1D_VERSION="1.5.1"
+export GLIB_VERSION="2.87.2"
+export DAV1D_VERSION="1.5.3"
 export LIBJXL_VERSION="0.11.1"
 export LIBHEIF_VERSION="1.21.2"
 export FFTW_VERSION="3.3.10"
 export LCMS2_VERSION="2.18"
 export LIBTIFF_VERSION="4.7.1"
-export CGIF_VERSION="0.5.1"
 export LIBEXIF_VERSION="0.6.25"
 export LIBVIPS_VERSION="8.18.0"
 
@@ -68,7 +67,6 @@ export LIBHEIF_URL="https://github.com/strukturag/libheif/releases/download/v${L
 export FFTW_URL="http://fftw.org/fftw-${FFTW_VERSION}.tar.gz"
 export LCMS2_URL="https://github.com/mm2/Little-CMS/releases/download/lcms2.18/lcms2-${LCMS2_VERSION}.tar.gz"
 export LIBTIFF_URL="https://download.osgeo.org/libtiff/tiff-${LIBTIFF_VERSION}.tar.gz"
-export CGIF_URL="https://github.com/dloebl/cgif/archive/refs/tags/v${CGIF_VERSION}.tar.gz"
 export LIBEXIF_URL="https://github.com/libexif/libexif/releases/download/v${LIBEXIF_VERSION}/libexif-${LIBEXIF_VERSION}.tar.bz2"
 export LIBVIPS_URL="https://github.com/libvips/libvips/releases/download/v${LIBVIPS_VERSION}/vips-${LIBVIPS_VERSION}.tar.xz"
 

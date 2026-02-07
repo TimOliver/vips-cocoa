@@ -45,7 +45,6 @@ build_libvips() {
     local fftw_dir="${STAGING_DIR}/fftw/${target}"
     local lcms2_dir="${STAGING_DIR}/lcms2/${target}"
     local libtiff_dir="${STAGING_DIR}/libtiff/${target}"
-    local cgif_dir="${STAGING_DIR}/cgif/${target}"
     local libexif_dir="${STAGING_DIR}/libexif/${target}"
 
     # Clean existing build
@@ -89,7 +88,6 @@ EOF
         "${fftw_dir}/lib/pkgconfig"
         "${lcms2_dir}/lib/pkgconfig"
         "${libtiff_dir}/lib/pkgconfig"
-        "${cgif_dir}/lib/pkgconfig"
         "${libexif_dir}/lib/pkgconfig"
     )
 
@@ -142,7 +140,6 @@ EOF
         "${fftw_dir}/lib/libfftw3.a"
         "${lcms2_dir}/lib/liblcms2.a"
         "${libtiff_dir}/lib/libtiff.a"
-        "${cgif_dir}/lib/libcgif.a"
         "${libexif_dir}/lib/libexif.a"
     )
 
@@ -177,7 +174,7 @@ EOF
         -Dexamples=false \
         -Dcplusplus=true \
         -Dcfitsio=disabled \
-        -Dcgif=enabled \
+        -Dcgif=disabled \
         -Dexif=enabled \
         -Dfftw=enabled \
         -Dfontconfig=disabled \

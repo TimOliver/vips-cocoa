@@ -44,7 +44,12 @@ build_libtiff() {
         -Dtiff-tests=OFF \
         -Dtiff-docs=OFF \
         -Dtiff-contrib=OFF \
-        -Dtiff-deprecated=OFF
+        -Dtiff-deprecated=OFF \
+        -Dlzma=OFF \
+        -Dzstd=OFF \
+        -Dwebp=OFF \
+        -Djbig=OFF \
+        -Dlerc=OFF
 
     cmake --build . --parallel "$JOBS"
     cmake --install .

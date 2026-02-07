@@ -117,7 +117,6 @@ get_static_libs() {
     echo "${STAGING_DIR}/fftw/${target}/lib/libfftw3.a"
     echo "${STAGING_DIR}/lcms2/${target}/lib/liblcms2.a"
     echo "${STAGING_DIR}/libtiff/${target}/lib/libtiff.a"
-    echo "${STAGING_DIR}/cgif/${target}/lib/libcgif.a"
     echo "${STAGING_DIR}/libexif/${target}/lib/libexif.a"
     echo "${STAGING_DIR}/libvips/${target}/lib/libvips.a"
 }
@@ -293,12 +292,22 @@ build_dylib_for_target() {
     static_libs+=" ${STAGING_DIR}/fftw/${target}/lib/libfftw3.a"
     static_libs+=" ${STAGING_DIR}/lcms2/${target}/lib/liblcms2.a"
     static_libs+=" ${STAGING_DIR}/libtiff/${target}/lib/libtiff.a"
-    static_libs+=" ${STAGING_DIR}/cgif/${target}/lib/libcgif.a"
     static_libs+=" ${STAGING_DIR}/libexif/${target}/lib/libexif.a"
     # Use -force_load for libvips to ensure all public symbols are exported
     static_libs+=" -force_load ${STAGING_DIR}/libvips/${target}/lib/libvips.a"
 
     local dylib="${output_dir}/vips_${arch}.dylib"
+
+    # Determine platform-specific frameworks
+    # glib 2.87+ uses Objective-C on Apple platforms (Foundation, CoreFoundation)
+    # and AppKit on macOS (NSWorkspace etc.)
+    local platform_libs="-lobjc -framework Foundation -framework CoreFoundation"
+    local sdk=$(get_target_sdk "$target")
+    case "$target" in
+        macos-*|catalyst-*)
+            platform_libs+=" -framework AppKit"
+            ;;
+    esac
 
     # Link everything into a dylib
     # -Wl,-w suppresses linker warnings (e.g., libffi alignment warning on x86_64)
@@ -308,7 +317,7 @@ build_dylib_for_target() {
         -install_name "@rpath/vips.framework/vips" \
         -o "$dylib" \
         $static_libs \
-        -lz -liconv -lresolv -lc++
+        -lz -liconv -lresolv -lc++ $platform_libs
 
     # Return the path via stdout
     echo "$dylib"

@@ -34,7 +34,7 @@ Options:
 
 Libraries (in build order):
     expat, libffi, pcre2, libjpeg-turbo, libpng, brotli, highway,
-    fftw, lcms2, cgif, libexif, glib, libwebp, dav1d, libtiff,
+    fftw, lcms2, libexif, glib, libwebp, dav1d, libtiff,
     libjxl, libheif, libvips
 
 Examples:
@@ -64,7 +64,6 @@ Library Versions:
     highway:        ${HIGHWAY_VERSION}
     fftw:           ${FFTW_VERSION}
     lcms2:          ${LCMS2_VERSION}
-    cgif:           ${CGIF_VERSION}
     libexif:        ${LIBEXIF_VERSION}
     glib:           ${GLIB_VERSION}
     dav1d:          ${DAV1D_VERSION}
@@ -265,7 +264,6 @@ BUILD_ORDER=(
     "highway"
     "fftw"
     "lcms2"
-    "cgif"
     "libexif"
     "glib"
     "libwebp"
