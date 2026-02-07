@@ -15,32 +15,37 @@ show_help() {
     cat << EOF
 Usage: $(basename "$0") [OPTIONS]
 
-Build libvips as universal xcframeworks for iOS/Mac Catalyst.
+Build libvips as universal xcframeworks for Apple platforms.
 
 Options:
-    -h, --help          Show this help message
-    -c, --clean         Clean all build artifacts before building
-    -d, --download-only Download sources only, don't build
-    -s, --skip-download Skip downloading sources (use existing)
-    -l, --list          List all libraries and versions
-    -j, --jobs N        Number of parallel jobs (default: auto)
-    -f, --framework     Rebuild xcframeworks only (fast iteration)
-    --dynamic-only      Build only dynamic xcframework
-    --static-only       Build only static xcframework
-    --skip-to LIB       Skip to building specific library
-    --only LIB          Build only specific library
+    -h, --help              Show this help message
+    -c, --clean             Clean all build artifacts before building
+    -d, --download-only     Download sources only, don't build
+    -s, --skip-download     Skip downloading sources (use existing)
+    -l, --list              List all libraries and versions
+    -j, --jobs N            Number of parallel jobs (default: auto)
+    -f, --framework         Rebuild xcframeworks only (fast iteration)
+    --platform PLATFORMS    Comma-separated list of platforms to build
+                            (ios,tvos,macos,visionos; default: all)
+    --dynamic-only          Build only dynamic xcframework
+    --static-only           Build only static xcframework
+    --skip-to LIB           Skip to building specific library
+    --only LIB              Build only specific library
 
 Libraries (in build order):
     expat, libffi, pcre2, libjpeg-turbo, libpng, brotli, highway,
     glib, libwebp, dav1d, libjxl, libheif, libvips
 
 Examples:
-    $(basename "$0")                    # Full build (both xcframeworks)
-    $(basename "$0") -c                 # Clean build
-    $(basename "$0") -f                 # Rebuild xcframeworks only (fast)
-    $(basename "$0") -f --dynamic-only  # Rebuild dynamic xcframework only
-    $(basename "$0") --skip-to glib     # Skip to glib (assume deps built)
-    $(basename "$0") --only libvips     # Build only libvips
+    $(basename "$0")                        # Full build (all platforms)
+    $(basename "$0") --platform ios         # Build iOS only
+    $(basename "$0") --platform ios,tvos    # Build iOS + tvOS
+    $(basename "$0") -c                     # Clean build
+    $(basename "$0") -f                     # Rebuild xcframeworks only (fast)
+    $(basename "$0") -f --dynamic-only      # Rebuild dynamic xcframework only
+    $(basename "$0") -f --platform macos    # Rebuild macOS xcframeworks only
+    $(basename "$0") --skip-to glib         # Skip to glib (assume deps built)
+    $(basename "$0") --only libvips         # Build only libvips
 
 EOF
 }
@@ -62,14 +67,13 @@ Library Versions:
     libheif:        ${LIBHEIF_VERSION}
     libvips:        ${LIBVIPS_VERSION}
 
-Target Platforms:
-    - iOS arm64 (device)
-    - iOS Simulator arm64 (Apple Silicon)
-    - iOS Simulator x86_64 (Intel)
-    - Mac Catalyst arm64 (Apple Silicon)
-    - Mac Catalyst x86_64 (Intel)
+Platforms:
+    iOS (min ${IOS_MIN_VERSION}):        device arm64, simulator arm64/x86_64, Mac Catalyst arm64/x86_64
+    tvOS (min ${TVOS_MIN_VERSION}):       device arm64, simulator arm64/x86_64
+    macOS (min ${MACOS_MIN_VERSION}):      arm64, x86_64
+    visionOS (min ${VISIONOS_MIN_VERSION}):   device arm64, simulator arm64
 
-Minimum iOS Version: ${IOS_MIN_VERSION}
+Active: ${ACTIVE_PLATFORMS}
 EOF
 }
 
@@ -122,6 +126,12 @@ while [[ $# -gt 0 ]]; do
             XCF_ARGS+=("--static-only")
             shift
             ;;
+        --platform)
+            ACTIVE_PLATFORMS="${2//,/ }"
+            export ACTIVE_PLATFORMS
+            export TARGETS=$(get_active_targets)
+            shift 2
+            ;;
         --skip-to)
             SKIP_TO="$2"
             shift 2
@@ -163,11 +173,35 @@ check_prerequisites() {
         exit 1
     fi
 
-    # Check Xcode SDK availability
-    if ! xcrun --sdk iphoneos --show-sdk-path >/dev/null 2>&1; then
-        log_error "iOS SDK not found. Please install Xcode with iOS support."
-        exit 1
-    fi
+    # Check Xcode SDK availability per active platform
+    for platform in $ACTIVE_PLATFORMS; do
+        case "$platform" in
+            ios)
+                if ! xcrun --sdk iphoneos --show-sdk-path >/dev/null 2>&1; then
+                    log_error "iOS SDK not found. Please install Xcode with iOS support."
+                    exit 1
+                fi
+                ;;
+            tvos)
+                if ! xcrun --sdk appletvos --show-sdk-path >/dev/null 2>&1; then
+                    log_error "tvOS SDK not found. Please install Xcode with tvOS support."
+                    exit 1
+                fi
+                ;;
+            macos)
+                if ! xcrun --sdk macosx --show-sdk-path >/dev/null 2>&1; then
+                    log_error "macOS SDK not found. Please install Xcode."
+                    exit 1
+                fi
+                ;;
+            visionos)
+                if ! xcrun --sdk xros --show-sdk-path >/dev/null 2>&1; then
+                    log_error "visionOS SDK not found. Please install Xcode with visionOS support."
+                    exit 1
+                fi
+                ;;
+        esac
+    done
 
     log_success "All prerequisites satisfied"
 }
@@ -179,7 +213,11 @@ collect_generated_files() {
     log_step "Collecting generated files"
 
     local gen_dir="${BUILD_OUTPUT_DIR}/libvips-generated"
-    local src_dir="${BUILD_OUTPUT_DIR}/libvips/ios"
+
+    # Use the first available target's build output
+    local first_target
+    first_target=$(echo "$TARGETS" | awk '{print $1}')
+    local src_dir="${BUILD_OUTPUT_DIR}/libvips/${first_target}"
 
     mkdir -p "$gen_dir"
 
@@ -278,7 +316,8 @@ main() {
 
     echo "=================================================="
     echo "  vips-cocoa build system"
-    echo "  Building libvips ${LIBVIPS_VERSION} for iOS/Catalyst"
+    echo "  Building libvips ${LIBVIPS_VERSION}"
+    echo "  Platforms: ${ACTIVE_PLATFORMS}"
     echo "=================================================="
     echo ""
 
@@ -293,7 +332,9 @@ main() {
     # Framework-only mode: just rebuild the xcframeworks
     if [ "$FRAMEWORK_ONLY" = true ]; then
         log_step "Rebuilding xcframeworks only"
-        bash "${SCRIPTS_DIR}/create-xcframework.sh" "${XCF_ARGS[@]}"
+        for platform in $ACTIVE_PLATFORMS; do
+            bash "${SCRIPTS_DIR}/create-xcframework.sh" --platform "$platform" "${XCF_ARGS[@]}"
+        done
 
         local end_time=$(date +%s)
         local duration=$((end_time - start_time))
@@ -325,9 +366,11 @@ main() {
     # Collect generated files for downstream consumers
     collect_generated_files
 
-    # Create xcframeworks
+    # Create xcframeworks (per platform)
     if [ -z "$ONLY_LIB" ] || [ "$ONLY_LIB" = "xcframework" ]; then
-        bash "${SCRIPTS_DIR}/create-xcframework.sh" "${XCF_ARGS[@]}"
+        for platform in $ACTIVE_PLATFORMS; do
+            bash "${SCRIPTS_DIR}/create-xcframework.sh" --platform "$platform" "${XCF_ARGS[@]}"
+        done
     fi
 
     # Report completion
@@ -342,8 +385,11 @@ main() {
     echo "=================================================="
     echo ""
     echo "Output:"
-    [ -d "${OUTPUT_DIR}/libvips.xcframework" ] && echo "  Dynamic: ${OUTPUT_DIR}/libvips.xcframework"
-    [ -d "${OUTPUT_DIR}/libvips-static.xcframework" ] && echo "  Static:  ${OUTPUT_DIR}/libvips-static.xcframework"
+    local xcf_base="${BUILD_DIR}/xcframeworks"
+    for platform in $ACTIVE_PLATFORMS; do
+        [ -d "${xcf_base}/${platform}/dynamic/vips.xcframework" ] && echo "  Dynamic (${platform}): ${xcf_base}/${platform}/dynamic/vips.xcframework"
+        [ -d "${xcf_base}/${platform}/static/vips.xcframework" ] && echo "  Static  (${platform}): ${xcf_base}/${platform}/static/vips.xcframework"
+    done
     echo ""
 }
 

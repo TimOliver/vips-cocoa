@@ -178,7 +178,9 @@ cmake_build_ios() {
     local build_dir="$2"
     local install_dir="$3"
     local platform="$4"
+    local deployment_target="${5:-$IOS_MIN_VERSION}"
     shift 4
+    [ $# -gt 0 ] && shift  # shift past deployment_target if provided
     local cmake_args=("$@")
 
     mkdir -p "$build_dir"
@@ -187,7 +189,7 @@ cmake_build_ios() {
     cmake "$src_dir" \
         -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAINS_DIR}/ios.toolchain.cmake" \
         -DPLATFORM="$platform" \
-        -DDEPLOYMENT_TARGET="${IOS_MIN_VERSION}" \
+        -DDEPLOYMENT_TARGET="${deployment_target}" \
         -DCMAKE_INSTALL_PREFIX="$install_dir" \
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=OFF \
@@ -292,6 +294,8 @@ clean_all() {
     log_info "Cleaning all build artifacts"
     rm -rf "$BUILD_OUTPUT_DIR"
     rm -rf "$STAGING_DIR"
+    rm -rf "${BUILD_DIR}/xcframeworks"
+    # Remove legacy xcframework names
     rm -rf "${OUTPUT_DIR}/libvips.xcframework"
     rm -rf "${OUTPUT_DIR}/libvips-static.xcframework"
 }

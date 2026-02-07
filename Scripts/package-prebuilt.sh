@@ -94,31 +94,39 @@ else
 fi
 
 # =============================================================================
-# 3. XCFramework zips
+# 3. Per-platform XCFramework zips
 # =============================================================================
-if [ -d "${PROJECT_ROOT}/libvips.xcframework" ]; then
-    XCF_DYN_FILE="libvips-${VERSION}.xcframework.zip"
-    log_info "Creating ${XCF_DYN_FILE}..."
-    cd "${PROJECT_ROOT}"
-    zip -r -q "${XCF_DYN_FILE}" libvips.xcframework/
+XCF_BASE="${PROJECT_ROOT}/build/xcframeworks"
+XCF_FILES=()
 
-    log_info "Created: ${XCF_DYN_FILE}"
-    log_info "Size: $(du -h "${PROJECT_ROOT}/${XCF_DYN_FILE}" | cut -f1)"
-else
-    log_info "libvips.xcframework not found, skipping dynamic zip."
-fi
+for platform_dir in "${XCF_BASE}"/*/; do
+    [ -d "$platform_dir" ] || continue
+    platform=$(basename "$platform_dir")
 
-if [ -d "${PROJECT_ROOT}/libvips-static.xcframework" ]; then
-    XCF_STATIC_FILE="libvips-static-${VERSION}.xcframework.zip"
-    log_info "Creating ${XCF_STATIC_FILE}..."
-    cd "${PROJECT_ROOT}"
-    zip -r -q "${XCF_STATIC_FILE}" libvips-static.xcframework/
+    # Dynamic
+    if [ -d "${platform_dir}dynamic/vips.xcframework" ]; then
+        XCF_DYN_FILE="vips-dynamic-${platform}.zip"
+        log_info "Creating ${XCF_DYN_FILE}..."
+        cd "${platform_dir}dynamic"
+        zip -r -q "${PROJECT_ROOT}/${XCF_DYN_FILE}" vips.xcframework/
 
-    log_info "Created: ${XCF_STATIC_FILE}"
-    log_info "Size: $(du -h "${PROJECT_ROOT}/${XCF_STATIC_FILE}" | cut -f1)"
-else
-    log_info "libvips-static.xcframework not found, skipping static zip."
-fi
+        log_info "Created: ${XCF_DYN_FILE}"
+        log_info "Size: $(du -h "${PROJECT_ROOT}/${XCF_DYN_FILE}" | cut -f1)"
+        XCF_FILES+=("${XCF_DYN_FILE}")
+    fi
+
+    # Static
+    if [ -d "${platform_dir}static/vips.xcframework" ]; then
+        XCF_STATIC_FILE="vips-static-${platform}.zip"
+        log_info "Creating ${XCF_STATIC_FILE}..."
+        cd "${platform_dir}static"
+        zip -r -q "${PROJECT_ROOT}/${XCF_STATIC_FILE}" vips.xcframework/
+
+        log_info "Created: ${XCF_STATIC_FILE}"
+        log_info "Size: $(du -h "${PROJECT_ROOT}/${XCF_STATIC_FILE}" | cut -f1)"
+        XCF_FILES+=("${XCF_STATIC_FILE}")
+    fi
+done
 
 # =============================================================================
 # Summary
@@ -127,7 +135,8 @@ echo ""
 log_info "Release artifacts:"
 [ -f "${PROJECT_ROOT}/${PREBUILT_FILE}" ] && log_info "  ${PREBUILT_FILE}"
 [ -f "${PROJECT_ROOT}/${GEN_FILE}" ] && log_info "  ${GEN_FILE}"
-[ -f "${PROJECT_ROOT}/${XCF_DYN_FILE}" ] && log_info "  ${XCF_DYN_FILE}"
-[ -f "${PROJECT_ROOT}/${XCF_STATIC_FILE}" ] && log_info "  ${XCF_STATIC_FILE}"
+for f in "${XCF_FILES[@]}"; do
+    [ -f "${PROJECT_ROOT}/${f}" ] && log_info "  ${f}"
+done
 echo ""
 log_info "Upload these files to GitHub releases."

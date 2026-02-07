@@ -1,6 +1,6 @@
 #!/bin/bash
-# create-xcframework.sh - Create libvips xcframeworks (dynamic and static)
-# Produces libvips.xcframework (dynamic) and libvips-static.xcframework (static)
+# create-xcframework.sh - Create vips xcframeworks (dynamic and static)
+# Produces per-platform vips.xcframework (dynamic and/or static)
 # without any Objective-C wrapper - raw libvips + glib headers exposed directly.
 
 set -e
@@ -14,6 +14,7 @@ source "${SCRIPT_DIR}/utils.sh"
 # =============================================================================
 BUILD_DYNAMIC=true
 BUILD_STATIC=true
+TARGET_PLATFORM=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -25,6 +26,10 @@ while [[ $# -gt 0 ]]; do
             BUILD_DYNAMIC=false
             shift
             ;;
+        --platform)
+            TARGET_PLATFORM="$2"
+            shift 2
+            ;;
         *)
             log_error "Unknown option: $1"
             exit 1
@@ -32,17 +37,60 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+if [ -z "$TARGET_PLATFORM" ]; then
+    log_error "--platform is required (ios, tvos, macos, visionos)"
+    exit 1
+fi
+
 # =============================================================================
 # Common Configuration
 # =============================================================================
-TEMP_DIR="${BUILD_OUTPUT_DIR}/xcframework_temp"
+FRAMEWORK_NAME="vips"
+TEMP_DIR="${BUILD_OUTPUT_DIR}/xcframework_temp/${TARGET_PLATFORM}"
+XCF_OUTPUT_DIR="${BUILD_DIR}/xcframeworks/${TARGET_PLATFORM}"
 
-# Platform configurations: platform_name:targets:archs
-PLATFORMS=(
-    "ios-arm64:ios:arm64"
-    "ios-arm64_x86_64-simulator:ios-sim-arm64,ios-sim-x86_64:arm64,x86_64"
-    "ios-arm64_x86_64-maccatalyst:catalyst-arm64,catalyst-x86_64:arm64,x86_64"
-)
+# Per-platform slice configurations: slice_name:targets:archs
+get_platform_slices() {
+    case "$1" in
+        ios)
+            echo "ios-arm64:ios:arm64"
+            echo "ios-arm64_x86_64-simulator:ios-sim-arm64,ios-sim-x86_64:arm64,x86_64"
+            echo "ios-arm64_x86_64-maccatalyst:catalyst-arm64,catalyst-x86_64:arm64,x86_64"
+            ;;
+        tvos)
+            echo "tvos-arm64:tvos:arm64"
+            echo "tvos-arm64_x86_64-simulator:tvos-sim-arm64,tvos-sim-x86_64:arm64,x86_64"
+            ;;
+        macos)
+            echo "macos-arm64_x86_64:macos-arm64,macos-x86_64:arm64,x86_64"
+            ;;
+        visionos)
+            echo "xros-arm64:visionos:arm64"
+            echo "xros-arm64-simulator:visionos-sim-arm64:arm64"
+            ;;
+    esac
+}
+
+# Read slices into array
+SLICES=()
+while IFS= read -r line; do
+    [ -n "$line" ] && SLICES+=("$line")
+done < <(get_platform_slices "$TARGET_PLATFORM")
+
+if [ ${#SLICES[@]} -eq 0 ]; then
+    log_error "Unknown platform: ${TARGET_PLATFORM}"
+    exit 1
+fi
+
+# Get the deployment target for this platform (use first target of the platform)
+get_platform_min_version() {
+    local first_slice="${SLICES[0]}"
+    IFS=':' read -r _ target_types _ <<< "$first_slice"
+    IFS=',' read -ra target_array <<< "$target_types"
+    get_target_deployment_target "${target_array[0]}"
+}
+
+PLATFORM_MIN_VERSION=$(get_platform_min_version)
 
 # Static libraries to include (per target)
 get_static_libs() {
@@ -126,7 +174,7 @@ create_framework_plist() {
     <key>CFBundleExecutable</key>
     <string>${framework_name}</string>
     <key>CFBundleIdentifier</key>
-    <string>org.libvips.libvips</string>
+    <string>org.libvips.vips</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
@@ -138,7 +186,7 @@ create_framework_plist() {
     <key>CFBundleVersion</key>
     <string>${LIBVIPS_VERSION}</string>
     <key>MinimumOSVersion</key>
-    <string>${IOS_MIN_VERSION}</string>
+    <string>${PLATFORM_MIN_VERSION}</string>
 </dict>
 </plist>
 EOF
@@ -149,13 +197,13 @@ EOF
 # =============================================================================
 create_umbrella_header() {
     local output_dir="$1"
-    cat > "${output_dir}/Headers/libvips.h" << 'EOF'
-#ifndef LIBVIPS_H
-#define LIBVIPS_H
+    cat > "${output_dir}/Headers/vips.h" << 'EOF'
+#ifndef VIPS_H
+#define VIPS_H
 
 #include <vips/vips.h>
 
-#endif /* LIBVIPS_H */
+#endif /* VIPS_H */
 EOF
 }
 
@@ -166,8 +214,8 @@ create_dynamic_module_map() {
     local output_dir="$1"
     mkdir -p "${output_dir}/Modules"
     cat > "${output_dir}/Modules/module.modulemap" << 'EOF'
-framework module libvips {
-    umbrella header "libvips.h"
+framework module vips {
+    umbrella header "vips.h"
 
     export *
     module * { export * }
@@ -184,8 +232,8 @@ create_static_module_map() {
     local output_dir="$1"
     mkdir -p "${output_dir}/Modules"
     cat > "${output_dir}/Modules/module.modulemap" << 'EOF'
-framework module libvips {
-    umbrella header "libvips.h"
+framework module vips {
+    umbrella header "vips.h"
 
     export *
     module * { export * }
@@ -244,14 +292,14 @@ build_dylib_for_target() {
     # Use -force_load for libvips to ensure all public symbols are exported
     static_libs+=" -force_load ${STAGING_DIR}/libvips/${target}/lib/libvips.a"
 
-    local dylib="${output_dir}/libvips_${arch}.dylib"
+    local dylib="${output_dir}/vips_${arch}.dylib"
 
     # Link everything into a dylib
     # -Wl,-w suppresses linker warnings (e.g., libffi alignment warning on x86_64)
     "$cc" $cflags \
         -dynamiclib \
         -Wl,-w \
-        -install_name "@rpath/libvips.framework/libvips" \
+        -install_name "@rpath/vips.framework/vips" \
         -o "$dylib" \
         $static_libs \
         -lz -liconv -lresolv -lc++
@@ -277,42 +325,42 @@ create_fat_dylib() {
 # Dynamic Framework
 # =============================================================================
 build_dynamic_xcframework() {
-    log_step "Creating libvips.xcframework (dynamic)"
+    log_step "Creating vips.xcframework (dynamic) for ${TARGET_PLATFORM}"
 
-    local xcf_dir="${OUTPUT_DIR}/libvips.xcframework"
+    local xcf_dir="${XCF_OUTPUT_DIR}/dynamic/vips.xcframework"
     local temp="${TEMP_DIR}/dynamic"
 
     rm -rf "$xcf_dir"
     rm -rf "$temp"
     mkdir -p "$temp"
 
-    for platform_config in "${PLATFORMS[@]}"; do
-        IFS=':' read -r platform_name target_types archs <<< "$platform_config"
+    for slice_config in "${SLICES[@]}"; do
+        IFS=':' read -r slice_name target_types archs <<< "$slice_config"
 
-        log_info "Processing platform: ${platform_name}"
+        log_info "Processing slice: ${slice_name}"
 
         # Create framework structure
-        local framework_dir="${temp}/${platform_name}/libvips.framework"
+        local framework_dir="${temp}/${slice_name}/vips.framework"
         mkdir -p "${framework_dir}/Headers"
 
         # Split target types and archs
         IFS=',' read -ra target_array <<< "$target_types"
         IFS=',' read -ra arch_array <<< "$archs"
 
-        local platform_build_dir="${temp}/${platform_name}/build"
-        mkdir -p "$platform_build_dir"
+        local slice_build_dir="${temp}/${slice_name}/build"
+        mkdir -p "$slice_build_dir"
 
         local arch_dylibs=()
 
         for i in "${!target_array[@]}"; do
             local target_type="${target_array[$i]}"
-            local dylib=$(build_dylib_for_target "$target_type" "$platform_build_dir")
+            local dylib=$(build_dylib_for_target "$target_type" "$slice_build_dir")
             arch_dylibs+=("$dylib")
         done
 
         # Create fat binary
         log_info "  Creating framework binary..."
-        create_fat_dylib "${framework_dir}/libvips" "${arch_dylibs[@]}"
+        create_fat_dylib "${framework_dir}/vips" "${arch_dylibs[@]}"
 
         # Copy headers (use first target for headers)
         copy_headers "${target_array[0]}" "${framework_dir}/Headers"
@@ -321,14 +369,14 @@ build_dynamic_xcframework() {
         create_umbrella_header "$framework_dir"
 
         # Create Info.plist
-        create_framework_plist "$framework_dir" "libvips"
+        create_framework_plist "$framework_dir" "$FRAMEWORK_NAME"
 
         # Create module map
         create_dynamic_module_map "$framework_dir"
 
         # Show info
-        local size=$(ls -lh "${framework_dir}/libvips" | awk '{print $5}')
-        local archs_info=$(lipo -info "${framework_dir}/libvips" 2>/dev/null | sed 's/.*: //' || echo "unknown")
+        local size=$(ls -lh "${framework_dir}/vips" | awk '{print $5}')
+        local archs_info=$(lipo -info "${framework_dir}/vips" 2>/dev/null | sed 's/.*: //' || echo "unknown")
         log_info "  Framework: ${archs_info} (${size})"
     done
 
@@ -336,13 +384,13 @@ build_dynamic_xcframework() {
     log_info "Creating xcframework..."
 
     local xcframework_args=()
-    for platform_config in "${PLATFORMS[@]}"; do
-        IFS=':' read -r platform_name _ _ <<< "$platform_config"
-        local framework_dir="${temp}/${platform_name}/libvips.framework"
+    for slice_config in "${SLICES[@]}"; do
+        IFS=':' read -r slice_name _ _ <<< "$slice_config"
+        local framework_dir="${temp}/${slice_name}/vips.framework"
         xcframework_args+=(-framework "$framework_dir")
     done
 
-    mkdir -p "$OUTPUT_DIR"
+    mkdir -p "$(dirname "$xcf_dir")"
     xcodebuild -create-xcframework \
         "${xcframework_args[@]}" \
         -output "$xcf_dir"
@@ -351,50 +399,50 @@ build_dynamic_xcframework() {
     rm -rf "$temp"
 
     # Verify
-    log_step "Verifying libvips.xcframework"
+    log_step "Verifying vips.xcframework (dynamic, ${TARGET_PLATFORM})"
     for dir in "${xcf_dir}"/*; do
-        if [ -d "$dir" ] && [ -d "${dir}/libvips.framework" ]; then
-            local platform=$(basename "$dir")
-            local binary="${dir}/libvips.framework/libvips"
+        if [ -d "$dir" ] && [ -d "${dir}/vips.framework" ]; then
+            local slice=$(basename "$dir")
+            local binary="${dir}/vips.framework/vips"
             if [ -f "$binary" ]; then
                 local archs=$(lipo -info "$binary" 2>/dev/null | sed 's/.*: //' || echo "unknown")
                 local size=$(ls -lh "$binary" | awk '{print $5}')
-                log_success "${platform}: ${archs} (${size})"
+                log_success "${slice}: ${archs} (${size})"
             fi
         fi
     done
 
-    log_success "Created libvips.xcframework"
+    log_success "Created vips.xcframework (dynamic) for ${TARGET_PLATFORM}"
 }
 
 # =============================================================================
 # Static Framework
 # =============================================================================
 build_static_xcframework() {
-    log_step "Creating libvips-static.xcframework (static)"
+    log_step "Creating vips.xcframework (static) for ${TARGET_PLATFORM}"
 
-    local xcf_dir="${OUTPUT_DIR}/libvips-static.xcframework"
+    local xcf_dir="${XCF_OUTPUT_DIR}/static/vips.xcframework"
     local temp="${TEMP_DIR}/static"
 
     rm -rf "$xcf_dir"
     rm -rf "$temp"
     mkdir -p "$temp"
 
-    for platform_config in "${PLATFORMS[@]}"; do
-        IFS=':' read -r platform_name target_types archs <<< "$platform_config"
+    for slice_config in "${SLICES[@]}"; do
+        IFS=':' read -r slice_name target_types archs <<< "$slice_config"
 
-        log_info "Processing platform: ${platform_name}"
+        log_info "Processing slice: ${slice_name}"
 
         # Create framework structure
-        local framework_dir="${temp}/${platform_name}/libvips.framework"
+        local framework_dir="${temp}/${slice_name}/vips.framework"
         mkdir -p "${framework_dir}/Headers"
 
         # Split target types and archs
         IFS=',' read -ra target_array <<< "$target_types"
         IFS=',' read -ra arch_array <<< "$archs"
 
-        local platform_build_dir="${temp}/${platform_name}/build"
-        mkdir -p "$platform_build_dir"
+        local slice_build_dir="${temp}/${slice_name}/build"
+        mkdir -p "$slice_build_dir"
 
         local arch_archives=()
 
@@ -405,7 +453,7 @@ build_static_xcframework() {
             echo "    Merging static libraries for ${target_type} (${arch})..." >&2
 
             # Merge all .a files into one
-            local merged="${platform_build_dir}/libvips_${arch}.a"
+            local merged="${slice_build_dir}/vips_${arch}.a"
             local libs=()
             while IFS= read -r lib; do
                 libs+=("$lib")
@@ -418,9 +466,9 @@ build_static_xcframework() {
         # Create fat archive
         log_info "  Creating framework archive..."
         if [ ${#arch_archives[@]} -eq 1 ]; then
-            cp "${arch_archives[0]}" "${framework_dir}/libvips"
+            cp "${arch_archives[0]}" "${framework_dir}/vips"
         else
-            lipo -create "${arch_archives[@]}" -output "${framework_dir}/libvips"
+            lipo -create "${arch_archives[@]}" -output "${framework_dir}/vips"
         fi
 
         # Copy headers (use first target for headers)
@@ -430,14 +478,14 @@ build_static_xcframework() {
         create_umbrella_header "$framework_dir"
 
         # Create Info.plist
-        create_framework_plist "$framework_dir" "libvips"
+        create_framework_plist "$framework_dir" "$FRAMEWORK_NAME"
 
         # Create module map
         create_static_module_map "$framework_dir"
 
         # Show info
-        local size=$(ls -lh "${framework_dir}/libvips" | awk '{print $5}')
-        local archs_info=$(lipo -info "${framework_dir}/libvips" 2>/dev/null | sed 's/.*: //' || echo "unknown")
+        local size=$(ls -lh "${framework_dir}/vips" | awk '{print $5}')
+        local archs_info=$(lipo -info "${framework_dir}/vips" 2>/dev/null | sed 's/.*: //' || echo "unknown")
         log_info "  Framework: ${archs_info} (${size})"
     done
 
@@ -445,13 +493,13 @@ build_static_xcframework() {
     log_info "Creating xcframework..."
 
     local xcframework_args=()
-    for platform_config in "${PLATFORMS[@]}"; do
-        IFS=':' read -r platform_name _ _ <<< "$platform_config"
-        local framework_dir="${temp}/${platform_name}/libvips.framework"
-        xcframework_args+=(-library "${framework_dir}/libvips" -headers "${framework_dir}/Headers")
+    for slice_config in "${SLICES[@]}"; do
+        IFS=':' read -r slice_name _ _ <<< "$slice_config"
+        local framework_dir="${temp}/${slice_name}/vips.framework"
+        xcframework_args+=(-library "${framework_dir}/vips" -headers "${framework_dir}/Headers")
     done
 
-    mkdir -p "$OUTPUT_DIR"
+    mkdir -p "$(dirname "$xcf_dir")"
     xcodebuild -create-xcframework \
         "${xcframework_args[@]}" \
         -output "$xcf_dir"
@@ -460,26 +508,26 @@ build_static_xcframework() {
     rm -rf "$temp"
 
     # Verify
-    log_step "Verifying libvips-static.xcframework"
+    log_step "Verifying vips.xcframework (static, ${TARGET_PLATFORM})"
     for dir in "${xcf_dir}"/*; do
         if [ -d "$dir" ]; then
-            local platform=$(basename "$dir")
+            local slice=$(basename "$dir")
             # Static xcframework uses library layout, not framework layout
             local binary=""
-            if [ -f "${dir}/libvips.framework/libvips" ]; then
-                binary="${dir}/libvips.framework/libvips"
-            elif [ -f "${dir}/libvips" ]; then
-                binary="${dir}/libvips"
+            if [ -f "${dir}/vips.framework/vips" ]; then
+                binary="${dir}/vips.framework/vips"
+            elif [ -f "${dir}/vips" ]; then
+                binary="${dir}/vips"
             fi
             if [ -n "$binary" ] && [ -f "$binary" ]; then
                 local archs=$(lipo -info "$binary" 2>/dev/null | sed 's/.*: //' || echo "unknown")
                 local size=$(ls -lh "$binary" | awk '{print $5}')
-                log_success "${platform}: ${archs} (${size})"
+                log_success "${slice}: ${archs} (${size})"
             fi
         fi
     done
 
-    log_success "Created libvips-static.xcframework"
+    log_success "Created vips.xcframework (static) for ${TARGET_PLATFORM}"
 }
 
 # =============================================================================
@@ -500,9 +548,9 @@ rm -rf "$TEMP_DIR"
 
 echo ""
 if [ "$BUILD_DYNAMIC" = true ]; then
-    echo "Dynamic: ${OUTPUT_DIR}/libvips.xcframework"
+    echo "Dynamic (${TARGET_PLATFORM}): ${XCF_OUTPUT_DIR}/dynamic/vips.xcframework"
 fi
 if [ "$BUILD_STATIC" = true ]; then
-    echo "Static:  ${OUTPUT_DIR}/libvips-static.xcframework"
+    echo "Static  (${TARGET_PLATFORM}): ${XCF_OUTPUT_DIR}/static/vips.xcframework"
 fi
 echo ""

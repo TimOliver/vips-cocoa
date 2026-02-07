@@ -1,20 +1,23 @@
 # vips-cocoa
 
-Build system for compiling libvips as universal xcframeworks for iOS, iOS Simulator, and Mac Catalyst.
+Build system for compiling libvips as universal xcframeworks for Apple platforms.
 
 ## Overview
 
-This project automates building libvips and all its dependencies for Apple platforms, producing `libvips.xcframework` (dynamic) and `libvips-static.xcframework` (static) for direct use of the libvips C API. No Objective-C wrapper — for that, see VIPSKit.
+This project automates building libvips and all its dependencies for Apple platforms, producing per-platform `vips.xcframework` (dynamic) and `vips.xcframework` (static) for direct use of the libvips C API. No Objective-C wrapper — for that, see VIPSKit.
 
 ## Supported Platforms
 
-| Platform | Architectures | SDK |
-|----------|--------------|-----|
-| iOS Device | arm64 | iphoneos |
-| iOS Simulator | arm64, x86_64 | iphonesimulator |
-| Mac Catalyst | arm64, x86_64 | macosx (with -macabi target) |
-
-- **Minimum deployment target:** iOS 15.0
+| Platform | Architectures | SDK | Min Version |
+|----------|--------------|-----|-------------|
+| iOS Device | arm64 | iphoneos | 15.0 |
+| iOS Simulator | arm64, x86_64 | iphonesimulator | 15.0 |
+| Mac Catalyst | arm64, x86_64 | macosx (-macabi) | 15.0 |
+| tvOS Device | arm64 | appletvos | 15.0 |
+| tvOS Simulator | arm64, x86_64 | appletvsimulator | 15.0 |
+| macOS | arm64, x86_64 | macosx | 12.0 |
+| visionOS Device | arm64 | xros | 1.0 |
+| visionOS Simulator | arm64 | xrsimulator | 1.0 |
 
 ## Image Format Support
 
@@ -77,12 +80,10 @@ vips-cocoa/
     ├── build-libjxl.sh
     ├── build-libheif.sh
     ├── build-libvips.sh
-    ├── cross-files/            # Meson cross-compilation files
-    │   ├── ios.ini
-    │   ├── ios-sim-arm64.ini
-    │   ├── ios-sim-x86_64.ini
-    │   ├── catalyst-arm64.ini
-    │   └── catalyst-x86_64.ini
+    ├── cross-files/            # Meson cross-compilation files (12 files)
+    │   ├── ios.ini             # iOS, tvOS, macOS, visionOS targets
+    │   ├── ios-sim-arm64.ini   # Plus simulator and catalyst variants
+    │   └── ...
     └── toolchains/             # CMake toolchain files
         └── ios.toolchain.cmake
 ```
@@ -105,12 +106,15 @@ vips-cocoa/
 ### Build Options
 
 ```bash
-./build.sh --clean          # Clean all build artifacts first
-./build.sh --skip-download  # Skip downloading sources (use existing)
-./build.sh --jobs 8         # Set parallel job count
-./build.sh -f               # Rebuild xcframeworks only (fast)
-./build.sh -f --dynamic-only  # Rebuild dynamic only
-./build.sh -f --static-only   # Rebuild static only
+./build.sh --clean              # Clean all build artifacts first
+./build.sh --skip-download      # Skip downloading sources (use existing)
+./build.sh --jobs 8             # Set parallel job count
+./build.sh --platform ios       # Build iOS only
+./build.sh --platform ios,tvos  # Build iOS + tvOS
+./build.sh -f                   # Rebuild xcframeworks only (fast)
+./build.sh -f --dynamic-only    # Rebuild dynamic only
+./build.sh -f --static-only     # Rebuild static only
+./build.sh -f --platform macos  # Rebuild macOS xcframeworks only
 ```
 
 ### Build Individual Libraries
@@ -121,17 +125,33 @@ vips-cocoa/
 
 ## Output
 
-The build produces two xcframeworks in the project root:
+The build produces per-platform xcframeworks under `build/xcframeworks/`:
 
-### Dynamic: `libvips.xcframework`
 ```
-libvips.xcframework/
+build/xcframeworks/
+├── ios/
+│   ├── dynamic/vips.xcframework/
+│   └── static/vips.xcframework/
+├── tvos/
+│   ├── dynamic/vips.xcframework/
+│   └── static/vips.xcframework/
+├── macos/
+│   ├── dynamic/vips.xcframework/
+│   └── static/vips.xcframework/
+└── visionos/
+    ├── dynamic/vips.xcframework/
+    └── static/vips.xcframework/
+```
+
+### Dynamic: `vips.xcframework`
+```
+vips.xcframework/
 ├── Info.plist
 ├── ios-arm64/
-│   └── libvips.framework/
-│       ├── libvips                 # Dynamic library (all deps linked in)
+│   └── vips.framework/
+│       ├── vips                    # Dynamic library (all deps linked in)
 │       ├── Headers/
-│       │   ├── libvips.h           # Umbrella header
+│       │   ├── vips.h              # Umbrella header
 │       │   ├── vips/               # libvips headers
 │       │   ├── glib.h              # glib top-level headers
 │       │   ├── glib/               # glib sub-headers
@@ -144,8 +164,21 @@ libvips.xcframework/
 └── ios-arm64_x86_64-maccatalyst/
 ```
 
-### Static: `libvips-static.xcframework`
+### Static: `vips.xcframework`
 All static libraries merged into a single archive per platform, with the same headers.
+
+### Release Artifacts
+After packaging (`Scripts/package-prebuilt.sh`):
+```
+vips-dynamic-ios.zip      # contains vips.xcframework for iOS
+vips-static-ios.zip
+vips-dynamic-tvos.zip
+vips-static-tvos.zip
+vips-dynamic-macos.zip
+vips-static-macos.zip
+vips-dynamic-visionos.zip
+vips-static-visionos.zip
+```
 
 ### Generated Files
 After a full build, `build/output/libvips-generated/` contains:
@@ -181,6 +214,15 @@ The dynamic framework uses `-force_load` for two libraries:
 - **glib**: Ensures `__attribute__((constructor))` initialization functions are included. Without this, glib's hash table infrastructure is not properly initialized, causing crashes.
 - **libvips**: Ensures all public symbols are exported from the dylib.
 
+### Platform Families
+
+| Family | `--platform` value | Targets |
+|--------|-------------------|---------|
+| iOS | `ios` | ios, ios-sim-arm64, ios-sim-x86_64, catalyst-arm64, catalyst-x86_64 |
+| tvOS | `tvos` | tvos, tvos-sim-arm64, tvos-sim-x86_64 |
+| macOS | `macos` | macos-arm64, macos-x86_64 |
+| visionOS | `visionos` | visionos, visionos-sim-arm64 |
+
 ### Target Identifiers
 
 | Target ID | Description |
@@ -190,6 +232,13 @@ The dynamic framework uses `-force_load` for two libraries:
 | `ios-sim-x86_64` | iOS Simulator x86_64 |
 | `catalyst-arm64` | Mac Catalyst arm64 |
 | `catalyst-x86_64` | Mac Catalyst x86_64 |
+| `tvos` | tvOS Device arm64 |
+| `tvos-sim-arm64` | tvOS Simulator arm64 |
+| `tvos-sim-x86_64` | tvOS Simulator x86_64 |
+| `macos-arm64` | macOS arm64 |
+| `macos-x86_64` | macOS x86_64 |
+| `visionos` | visionOS Device arm64 |
+| `visionos-sim-arm64` | visionOS Simulator arm64 |
 
 ## Troubleshooting
 
@@ -217,7 +266,7 @@ Check that all dependencies built successfully for the failing target. The build
 
 ```bash
 ./build.sh --clean              # Clean and rebuild
-rm -rf build libvips.xcframework libvips-static.xcframework  # Manual clean
+rm -rf build                    # Manual clean
 ```
 
 ## License
