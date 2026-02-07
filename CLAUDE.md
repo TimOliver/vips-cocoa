@@ -34,29 +34,37 @@ This project automates building libvips and all its dependencies for Apple platf
 ## Dependencies (Build Order)
 
 ### Tier 1 - No dependencies
-1. **expat** (2.7.3) - XML parser
-2. **libffi** (3.5.2) - Foreign function interface
-3. **pcre2** (10.47) - Regular expressions
-4. **libjpeg-turbo** (3.1.3) - JPEG codec with SIMD
-5. **libpng** (1.6.54) - PNG codec
-6. **brotli** (1.2.0) - Compression library
-7. **highway** (1.3.0) - SIMD library
-8. **fftw** (3.3.10) - FFT library
-9. **lcms2** (2.18) - ICC color management
-10. **libexif** (0.6.25) - EXIF metadata
+| # | Library | Version | Build System | Output |
+|---|---------|---------|---|---|
+| 1 | **expat** | 2.7.4 | CMake | `libexpat.a` |
+| 2 | **libffi** | 3.5.2 | Manual (CC) | `libffi.a` |
+| 3 | **pcre2** | 10.47 | CMake | `libpcre2-8.a` |
+| 4 | **libjpeg-turbo** | 3.1.3 | CMake | `libjpeg.a` |
+| 5 | **libpng** | 1.6.54 | CMake | `libpng16.a` |
+| 6 | **brotli** | 1.2.0 | CMake | `libbrotli{common,dec,enc}.a` |
+| 7 | **highway** | 1.3.0 | CMake | `libhwy.a` |
+| 8 | **fftw** | 3.3.10 | Autotools | `libfftw3.a` |
+| 9 | **lcms2** | 2.18 | Meson | `liblcms2.a` |
+| 10 | **libexif** | 0.6.25 | Autotools | `libexif.a` |
 
 ### Tier 2 - Depends on Tier 1
-11. **glib** (2.87.1) - Core utility library (needs libffi, pcre2)
-12. **libwebp** (1.6.0) - WebP codec
-13. **dav1d** (1.5.1) - AV1 decoder
-14. **libtiff** (4.7.1) - TIFF codec (needs libjpeg-turbo)
+| # | Library | Version | Build System | Dependencies | Output |
+|---|---------|---------|---|---|---|
+| 11 | **glib** | 2.87.2 | Meson | libffi, pcre2 | `libglib-2.0.a`, `libgio-2.0.a`, `libgobject-2.0.a`, `libgmodule-2.0.a`, `libintl.a` |
+| 12 | **libwebp** | 1.6.0 | CMake | — | `libwebp.a`, `libwebpmux.a`, `libwebpdemux.a`, `libsharpyuv.a` |
+| 13 | **dav1d** | 1.5.3 | Meson | — | `libdav1d.a` |
+| 14 | **libtiff** | 4.7.1 | CMake | libjpeg-turbo | `libtiff.a` |
 
 ### Tier 3 - Depends on Tier 2
-15. **libjxl** (0.11.1) - JPEG-XL codec (needs brotli, highway)
-16. **libheif** (1.21.2) - HEIF/AVIF container (needs dav1d)
+| # | Library | Version | Build System | Dependencies | Output |
+|---|---------|---------|---|---|---|
+| 15 | **libjxl** | 0.11.1 | CMake | brotli, highway | `libjxl.a`, `libjxl_threads.a`, `libjxl_cms.a` |
+| 16 | **libheif** | 1.21.2 | CMake | dav1d | `libheif.a` |
 
 ### Final
-17. **libvips** (8.18.0) - Image processing library
+| # | Library | Version | Build System | Output |
+|---|---------|---------|---|---|
+| 17 | **libvips** | 8.18.0 | Meson | `libvips.a` |
 
 ## Project Structure
 
@@ -218,6 +226,20 @@ These are needed by downstream consumers that build libvips from source (e.g., V
 The dynamic framework uses `-force_load` for two libraries:
 - **glib**: Ensures `__attribute__((constructor))` initialization functions are included. Without this, glib's hash table infrastructure is not properly initialized, causing crashes.
 - **libvips**: Ensures all public symbols are exported from the dylib.
+
+### ObjC and Framework Linking
+
+glib (2.87+) includes Objective-C source files (`.m`) on Apple platforms for Cocoa integration (notifications, settings, app info). The dynamic framework link therefore requires:
+- `-lobjc -framework Foundation -framework CoreFoundation` on all platforms
+- `-framework AppKit` additionally on macOS and Mac Catalyst targets (for `NSWorkspace` etc.)
+
+### libtiff Optional Dependencies
+
+libtiff's CMake build auto-detects system lzma, zstd, webp, jbig, and lerc. These must be explicitly disabled (`-Dlzma=OFF -Dzstd=OFF -Dwebp=OFF -Djbig=OFF -Dlerc=OFF`) to prevent phantom `Requires.private` entries in the pkg-config file that would cause libvips's meson configure to fail.
+
+### FFTW Precision
+
+libvips expects double-precision FFTW (`fftw3` pkg-config name, `libfftw3.a`). Do **not** build with `--enable-float`, which produces single-precision (`fftw3f` / `libfftw3f.a`) and will not be found by libvips.
 
 ### Platform Families
 
