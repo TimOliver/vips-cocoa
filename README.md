@@ -2,9 +2,9 @@
 
 Build system for compiling [libvips](https://www.libvips.org/) and all its dependencies as universal xcframeworks for Apple platforms (iOS, iOS Simulator, Mac Catalyst).
 
-Produces **two** xcframeworks:
-- **`libvips.xcframework`** (dynamic) — single dylib per platform, all dependencies statically linked in
-- **`libvips-static.xcframework`** (static) — merged static archive per platform
+Produces a **`vips.xcframework`** in both dynamic and static variants:
+- **Dynamic** — single dylib per platform, all dependencies statically linked in
+- **Static** — merged static archive per platform
 
 For a high-level Objective-C/Swift wrapper, see [VIPSKit](https://github.com/anthropics/VIPSKit).
 
@@ -58,33 +58,32 @@ JPEG (libjpeg-turbo with SIMD), PNG, WebP, JPEG-XL, AVIF (decode-only via dav1d 
 ## Output
 
 ```
-vips-cocoa/
-├── libvips.xcframework/           # Dynamic framework
-│   ├── ios-arm64/
-│   │   └── libvips.framework/
-│   │       ├── libvips             # Dynamic library
-│   │       ├── Headers/            # vips/ + glib headers
-│   │       ├── Modules/module.modulemap
-│   │       └── Info.plist
-│   ├── ios-arm64_x86_64-simulator/
-│   └── ios-arm64_x86_64-maccatalyst/
-│
-├── libvips-static.xcframework/    # Static framework
-│   ├── ios-arm64/
-│   ├── ios-arm64_x86_64-simulator/
-│   └── ios-arm64_x86_64-maccatalyst/
-│
-└── build/output/libvips-generated/ # Generated files for source builds
-    ├── config.h
-    ├── vipsmarshal.c
-    ├── vipsmarshal.h
-    ├── enumtypes.c
-    └── enumtypes.h
+build/xcframeworks/
+├── ios/
+│   ├── dynamic/vips.xcframework/
+│   │   ├── ios-arm64/
+│   │   │   └── vips.framework/
+│   │   │       ├── vips              # Dynamic library (all deps linked in)
+│   │   │       ├── Headers/          # vips/ + glib headers
+│   │   │       ├── Modules/module.modulemap
+│   │   │       └── Info.plist
+│   │   ├── ios-arm64_x86_64-simulator/
+│   │   └── ios-arm64_x86_64-maccatalyst/
+│   └── static/vips.xcframework/
+│       ├── ios-arm64/
+│       ├── ios-arm64_x86_64-simulator/
+│       └── ios-arm64_x86_64-maccatalyst/
+├── macos/
+│   ├── dynamic/vips.xcframework/
+│   └── static/vips.xcframework/
+└── visionos/
+    ├── dynamic/vips.xcframework/
+    └── static/vips.xcframework/
 ```
 
 ## Using the Dynamic Framework
 
-1. Drag `libvips.xcframework` into your Xcode project
+1. Drag `vips.xcframework` (from the `dynamic/` directory) into your Xcode project
 2. Add to "Frameworks, Libraries, and Embedded Content"
 3. Set "Embed" to "Embed & Sign"
 
@@ -101,7 +100,7 @@ VipsImage *in = vips_image_new_from_file("input.jpg", NULL);
 
 ## Using the Static Framework
 
-Add `libvips-static.xcframework` to your project and link the following system libraries:
+Add `vips.xcframework` (from the `static/` directory) to your project and link the following system libraries:
 - `libz`
 - `libiconv`
 - `libresolv`
@@ -116,8 +115,8 @@ Add `libvips-static.xcframework` to your project and link the following system l
 This creates:
 - `vips-cocoa-prebuilt-0.1.0.tar.gz` — all pre-built static libraries
 - `libvips-generated-0.1.0.tar.gz` — generated config/marshal/enum files
-- `libvips-0.1.0.xcframework.zip` — dynamic xcframework
-- `libvips-static-0.1.0.xcframework.zip` — static xcframework
+- `vips-dynamic-{platform}.zip` — dynamic `vips.xcframework` per platform
+- `vips-static-{platform}.zip` — static `vips.xcframework` per platform
 
 ## Dependencies (Build Order)
 
