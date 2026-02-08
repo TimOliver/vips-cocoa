@@ -137,6 +137,12 @@ This creates:
 | 12 | libheif | 1.21.2 | dav1d |
 | 13 | libvips | 8.18.0 | all above |
 
+## Disclaimer
+
+This project was built extensively with the help of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (Opus 4.5 & 4.6). Given the number of dependencies `libvips` requires, implementing cross-compilation for every Apple platform would have been an exceptionally difficult and time-consuming undertaking otherwise.
+
+All code and build output has been reviewed and tested, but as with any project of this complexity, AI-assisted or not, bugs may exist. If you encounter incorrect behaviour, please [open an issue](https://github.com/TimOliver/vips-cocoa/issues).
+
 ## License
 
 - libvips: LGPL-2.1
