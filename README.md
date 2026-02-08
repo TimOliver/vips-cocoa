@@ -1,12 +1,10 @@
 # vips-cocoa
 
-Build system for compiling [libvips](https://www.libvips.org/) and all its dependencies as universal xcframeworks for Apple platforms (iOS, iOS Simulator, Mac Catalyst).
+Build system for compiling [libvips](https://www.libvips.org/) and all its dependencies as universal xcframeworks for Apple platforms (iOS, macOS and visionOS).
 
 Produces a **`vips.xcframework`** in both dynamic and static variants:
 - **Dynamic** — single dylib per platform, all dependencies statically linked in
 - **Static** — merged static archive per platform
-
-For a high-level Objective-C/Swift wrapper, see [VIPSKit](https://github.com/anthropics/VIPSKit).
 
 ## Supported Platforms
 
@@ -96,7 +94,7 @@ VipsImage *in = vips_image_new_from_file("input.jpg", NULL);
 // ... use libvips C API directly ...
 ```
 
-**Note:** libvips is LGPL-2.1, so the dynamic framework satisfies LGPL requirements for proprietary apps. If you use the static framework, ensure your linking complies with LGPL terms.
+**Note:** libvips is LGPL-2.1, so the dynamic framework satisfies LGPL requirements for proprietary apps.
 
 ## Using the Static Framework
 
@@ -105,6 +103,9 @@ Add `vips.xcframework` (from the `static/` directory) to your project and link t
 - `libiconv`
 - `libresolv`
 - `libc++`
+
+**Note:** libvips is LGPL-2.1, so linking this framework directly with your main app binary isn't allowed. 
+Static versions are being provided so they may be used as wrapped components of other dynamic frameworks.
 
 ## Packaging Releases
 
