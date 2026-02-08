@@ -1,0 +1,110 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Release v${{ inputs.version }}
+    runs-on: macos-15
+    timeout-minutes: 180
+
+    steps:
+      - name: Validate version
+        run: |
+          VERSION="${{ inputs.version }}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::Invalid version format: '$VERSION'. Expected semver (e.g. 1.0.0 or 1.0.0-beta.1)"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check tag doesn't exist
+        run: |
+          if git rev-parse "v${{ inputs.version }}" >/dev/null 2>&1; then
+            echo "::error::Tag v${{ inputs.version }} already exists"
+            exit 1
+          fi
+
+      - name: Install prerequisites
+        run: brew install meson ninja cmake nasm glib
+
+      - name: Create version commit and tag
+        run: |
+          echo "${{ inputs.version }}" > VERSION
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add VERSION
+          git commit -m "Release v${{ inputs.version }}"
+          git tag "v${{ inputs.version }}"
+
+      - name: Push commit and tag
+        run: git push origin HEAD "v${{ inputs.version }}"
+
+      - name: Build all platforms
+        run: ./build.sh
+
+      - name: Package artifacts
+        run: ./Scripts/package-prebuilt.sh "${{ inputs.version }}"
+
+      - name: Generate release notes body
+        run: |
+          source Scripts/env.sh
+          {
+          echo "## Bundled Library Versions"
+          echo ""
+          echo "| Library | Version |"
+          echo "|---------|---------|"
+          echo "| libvips | ${LIBVIPS_VERSION} |"
+          echo "| glib | ${GLIB_VERSION} |"
+          echo "| libjpeg-turbo | ${LIBJPEG_TURBO_VERSION} |"
+          echo "| libpng | ${LIBPNG_VERSION} |"
+          echo "| libwebp | ${LIBWEBP_VERSION} |"
+          echo "| libjxl | ${LIBJXL_VERSION} |"
+          echo "| libheif | ${LIBHEIF_VERSION} |"
+          echo "| dav1d | ${DAV1D_VERSION} |"
+          echo "| libtiff | ${LIBTIFF_VERSION} |"
+          echo "| brotli | ${BROTLI_VERSION} |"
+          echo "| highway | ${HIGHWAY_VERSION} |"
+          echo "| fftw | ${FFTW_VERSION} |"
+          echo "| lcms2 | ${LCMS2_VERSION} |"
+          echo "| libexif | ${LIBEXIF_VERSION} |"
+          echo "| expat | ${EXPAT_VERSION} |"
+          echo "| libffi | ${LIBFFI_VERSION} |"
+          echo "| pcre2 | ${PCRE2_VERSION} |"
+          echo ""
+          echo "## Platforms"
+          echo ""
+          echo "- iOS ${IOS_MIN_VERSION}+ (device arm64, simulator arm64/x86_64, Mac Catalyst arm64/x86_64)"
+          echo "- macOS ${MACOS_MIN_VERSION}+ (arm64, x86_64)"
+          echo "- visionOS ${VISIONOS_MIN_VERSION}+ (device arm64, simulator arm64)"
+          } > release_notes.md
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ inputs.version }}" \
+            --title "v${{ inputs.version }}" \
+            --notes-file release_notes.md \
+            --generate-notes \
+            vips-dynamic-ios.zip \
+            vips-static-ios.zip \
+            vips-dynamic-macos.zip \
+            vips-static-macos.zip \
+            vips-dynamic-visionos.zip \
+            vips-static-visionos.zip \
+            "vips-cocoa-prebuilt-${{ inputs.version }}.tar.gz" \
+            "libvips-generated-${{ inputs.version }}.tar.gz"
