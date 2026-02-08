@@ -4,7 +4,7 @@ Build system for compiling libvips as universal xcframeworks for Apple platforms
 
 ## Overview
 
-This project automates building libvips and all its dependencies for Apple platforms, producing per-platform `vips.xcframework` (dynamic) and `vips.xcframework` (static) for direct use of the libvips C API. No Objective-C wrapper — for that, see VIPSKit.
+This project automates building libvips and all its dependencies for Apple platforms, producing `vips.xcframework` (dynamic and static) for direct use of the libvips C API. Distributed via Swift Package Manager as binary targets. No Objective-C wrapper — for that, see VIPSKit.
 
 ## Supported Platforms
 
@@ -72,6 +72,7 @@ This project automates building libvips and all its dependencies for Apple platf
 vips-cocoa/
 ├── CLAUDE.md                   # This file
 ├── README.md                   # User-facing documentation
+├── Package.swift               # SPM package manifest (binary targets)
 ├── build.sh                    # Main build orchestrator
 ├── LICENSE                     # LGPL-2.1
 ├── .gitignore
@@ -79,7 +80,8 @@ vips-cocoa/
     ├── env.sh                  # Environment, paths, versions
     ├── utils.sh                # Common build functions
     ├── download-sources.sh     # Download all source tarballs
-    ├── create-xcframework.sh   # Creates dynamic + static xcframeworks
+    ├── create-xcframework.sh   # Creates per-platform dynamic + static xcframeworks
+    ├── create-spm-xcframework.sh # Combines per-platform into all-platform xcframeworks for SPM
     ├── package-prebuilt.sh     # Package release artifacts
     ├── build-expat.sh
     ├── build-libffi.sh
@@ -153,8 +155,11 @@ build/xcframeworks/
 ├── macos/
 │   ├── dynamic/vips.xcframework/
 │   └── static/vips.xcframework/
-└── visionos/
-    ├── dynamic/vips.xcframework/
+├── visionos/
+│   ├── dynamic/vips.xcframework/
+│   └── static/vips.xcframework/
+└── spm/                            # Combined all-platform (created by package-prebuilt.sh)
+    ├── dynamic/vips.xcframework/   # All 6 slices in one xcframework
     └── static/vips.xcframework/
 ```
 
@@ -185,7 +190,9 @@ All static libraries merged into a single archive per platform, with the same he
 ### Release Artifacts
 After packaging (`Scripts/package-prebuilt.sh`):
 ```
-vips-dynamic-ios.zip      # contains vips.xcframework for iOS
+vips-dynamic.zip          # Combined all-platform xcframework (for SPM)
+vips-static.zip           # Combined all-platform xcframework (for SPM)
+vips-dynamic-ios.zip      # Per-platform xcframework for iOS
 vips-static-ios.zip
 vips-dynamic-macos.zip
 vips-static-macos.zip
@@ -262,6 +269,33 @@ libvips expects double-precision FFTW (`fftw3` pkg-config name, `libfftw3.a`). D
 | `macos-x86_64` | macOS x86_64 |
 | `visionos` | visionOS Device arm64 |
 | `visionos-sim-arm64` | visionOS Simulator arm64 |
+
+## Swift Package Manager Distribution
+
+The project vends xcframeworks via SPM binary targets in `Package.swift`. Two products are available:
+
+- **`vips`** (dynamic) — For direct use of the libvips dylib (default)
+- **`vips-static`** — For consumers like VIPSKit that link vips into their own dynamic framework
+
+### How It Works
+
+1. Per-platform xcframeworks are built by `create-xcframework.sh` (one per platform family)
+2. `create-spm-xcframework.sh` combines them into single all-platform xcframeworks (6 slices: ios-arm64, ios-sim, catalyst, macos, visionos-device, visionos-sim)
+3. These are zipped as `vips-static.zip` and `vips-dynamic.zip` and attached to GitHub releases
+4. `Package.swift` uses URL-based binary targets pointing to the release artifacts
+
+### Release Flow
+
+The CI workflow (`.github/workflows/release.yml`) handles version/checksum updates automatically:
+
+1. Builds all platforms
+2. Packages artifacts (including combined SPM zips)
+3. Computes checksums via `swift package compute-checksum`
+4. Updates `Package.swift` with the version and checksums via `sed`
+5. Commits `VERSION` + `Package.swift`, tags, and pushes
+6. Creates the GitHub Release with all artifacts
+
+The `Package.swift` in the repo uses placeholder values (`0.0.0` / `PLACEHOLDER`) that are replaced at release time.
 
 ## Troubleshooting
 

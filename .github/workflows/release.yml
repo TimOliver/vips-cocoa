@@ -41,23 +41,37 @@ jobs:
       - name: Install prerequisites
         run: brew install meson ninja cmake nasm glib
 
-      - name: Create version commit and tag
-        run: |
-          echo "${{ inputs.version }}" > VERSION
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add VERSION
-          git commit -m "Release v${{ inputs.version }}"
-          git tag "v${{ inputs.version }}"
-
-      - name: Push commit and tag
-        run: git push origin HEAD "v${{ inputs.version }}"
-
       - name: Build all platforms
         run: ./build.sh
 
       - name: Package artifacts
         run: ./Scripts/package-prebuilt.sh "${{ inputs.version }}"
+
+      - name: Compute checksums and update Package.swift
+        run: |
+          STATIC_CHECKSUM=$(swift package compute-checksum vips-static.zip)
+          DYNAMIC_CHECKSUM=$(swift package compute-checksum vips-dynamic.zip)
+          echo "Static checksum:  ${STATIC_CHECKSUM}"
+          echo "Dynamic checksum: ${DYNAMIC_CHECKSUM}"
+
+          sed -i '' "s|let version = \".*\"|let version = \"${{ inputs.version }}\"|" Package.swift
+          sed -i '' "s|let staticChecksum = \".*\"|let staticChecksum = \"${STATIC_CHECKSUM}\"|" Package.swift
+          sed -i '' "s|let dynamicChecksum = \".*\"|let dynamicChecksum = \"${DYNAMIC_CHECKSUM}\"|" Package.swift
+
+          echo "Updated Package.swift:"
+          head -8 Package.swift
+
+      - name: Create version commit and tag
+        run: |
+          echo "${{ inputs.version }}" > VERSION
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add VERSION Package.swift
+          git commit -m "Release v${{ inputs.version }}"
+          git tag "v${{ inputs.version }}"
+
+      - name: Push commit and tag
+        run: git push origin HEAD "v${{ inputs.version }}"
 
       - name: Generate release notes body
         run: |
@@ -90,6 +104,13 @@ jobs:
           echo "- iOS ${IOS_MIN_VERSION}+ (device arm64, simulator arm64/x86_64, Mac Catalyst arm64/x86_64)"
           echo "- macOS ${MACOS_MIN_VERSION}+ (arm64, x86_64)"
           echo "- visionOS ${VISIONOS_MIN_VERSION}+ (device arm64, simulator arm64)"
+          echo ""
+          echo "## Swift Package Manager"
+          echo ""
+          echo "Add this package to your \`Package.swift\`:"
+          echo "\`\`\`swift"
+          echo ".package(url: \"https://github.com/TimOliver/vips-cocoa.git\", from: \"${{ inputs.version }}\")"
+          echo "\`\`\`"
           } > release_notes.md
 
       - name: Create GitHub Release
@@ -100,6 +121,8 @@ jobs:
             --title "v${{ inputs.version }}" \
             --notes-file release_notes.md \
             --generate-notes \
+            vips-dynamic.zip \
+            vips-static.zip \
             vips-dynamic-ios.zip \
             vips-static-ios.zip \
             vips-dynamic-macos.zip \

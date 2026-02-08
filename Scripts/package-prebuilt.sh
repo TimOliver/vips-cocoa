@@ -102,6 +102,8 @@ XCF_FILES=()
 for platform_dir in "${XCF_BASE}"/*/; do
     [ -d "$platform_dir" ] || continue
     platform=$(basename "$platform_dir")
+    # Skip the combined SPM output directory
+    [ "$platform" = "spm" ] && continue
 
     # Dynamic
     if [ -d "${platform_dir}dynamic/vips.xcframework" ]; then
@@ -129,6 +131,38 @@ for platform_dir in "${XCF_BASE}"/*/; do
 done
 
 # =============================================================================
+# 4. Combined SPM xcframeworks (all platforms in one xcframework)
+# =============================================================================
+SPM_FILES=()
+
+log_info "Creating combined SPM xcframeworks..."
+"${SCRIPT_DIR}/create-spm-xcframework.sh"
+
+SPM_XCF_BASE="${PROJECT_ROOT}/build/xcframeworks/spm"
+
+if [ -d "${SPM_XCF_BASE}/dynamic/vips.xcframework" ]; then
+    SPM_DYN_FILE="vips-dynamic.zip"
+    log_info "Creating ${SPM_DYN_FILE}..."
+    cd "${SPM_XCF_BASE}/dynamic"
+    zip -r -q "${PROJECT_ROOT}/${SPM_DYN_FILE}" vips.xcframework/
+
+    log_info "Created: ${SPM_DYN_FILE}"
+    log_info "Size: $(du -h "${PROJECT_ROOT}/${SPM_DYN_FILE}" | cut -f1)"
+    SPM_FILES+=("${SPM_DYN_FILE}")
+fi
+
+if [ -d "${SPM_XCF_BASE}/static/vips.xcframework" ]; then
+    SPM_STATIC_FILE="vips-static.zip"
+    log_info "Creating ${SPM_STATIC_FILE}..."
+    cd "${SPM_XCF_BASE}/static"
+    zip -r -q "${PROJECT_ROOT}/${SPM_STATIC_FILE}" vips.xcframework/
+
+    log_info "Created: ${SPM_STATIC_FILE}"
+    log_info "Size: $(du -h "${PROJECT_ROOT}/${SPM_STATIC_FILE}" | cut -f1)"
+    SPM_FILES+=("${SPM_STATIC_FILE}")
+fi
+
+# =============================================================================
 # Summary
 # =============================================================================
 echo ""
@@ -136,6 +170,9 @@ log_info "Release artifacts:"
 [ -f "${PROJECT_ROOT}/${PREBUILT_FILE}" ] && log_info "  ${PREBUILT_FILE}"
 [ -f "${PROJECT_ROOT}/${GEN_FILE}" ] && log_info "  ${GEN_FILE}"
 for f in "${XCF_FILES[@]}"; do
+    [ -f "${PROJECT_ROOT}/${f}" ] && log_info "  ${f}"
+done
+for f in "${SPM_FILES[@]}"; do
     [ -f "${PROJECT_ROOT}/${f}" ] && log_info "  ${f}"
 done
 echo ""
