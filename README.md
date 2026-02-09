@@ -8,13 +8,14 @@ Produces a **`vips.xcframework`** in both dynamic and static variants:
 
 ## Supported Platforms
 
-| Platform | Architectures | SDK |
-|----------|--------------|-----|
-| iOS Device | arm64 | iphoneos |
-| iOS Simulator | arm64, x86_64 | iphonesimulator |
-| Mac Catalyst | arm64, x86_64 | macosx (with -macabi target) |
-
-Minimum deployment target: iOS 15.0
+| Platform | Architectures | SDK | Min Version |
+|----------|--------------|-----|-------------|
+| iOS Device | arm64 | iphoneos | 15.0 |
+| iOS Simulator | arm64, x86_64 | iphonesimulator | 15.0 |
+| Mac Catalyst | arm64, x86_64 | macosx (with -macabi target) | 15.0 |
+| macOS | arm64, x86_64 | macosx | 12.0 |
+| visionOS Device | arm64 | xros | 1.0 |
+| visionOS Simulator | arm64 | xrsimulator | 1.0 |
 
 ## Image Format Support
 
