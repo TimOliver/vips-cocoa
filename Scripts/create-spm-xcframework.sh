@@ -119,11 +119,11 @@ build_combined_static() {
             local static_lib=""
             local headers_dir=""
 
-            if [ -f "${slice_dir}vips.a" ]; then
-                static_lib="${slice_dir}vips.a"
+            if [ -f "${slice_dir}libvips.a" ]; then
+                static_lib="${slice_dir}libvips.a"
                 headers_dir="${slice_dir}Headers"
-            elif [ -f "${slice_dir}vips.framework/vips.a" ]; then
-                static_lib="${slice_dir}vips.framework/vips.a"
+            elif [ -f "${slice_dir}vips.framework/libvips.a" ]; then
+                static_lib="${slice_dir}vips.framework/libvips.a"
                 headers_dir="${slice_dir}vips.framework/Headers"
             fi
 
